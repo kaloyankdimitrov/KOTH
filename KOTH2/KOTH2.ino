@@ -4,20 +4,35 @@
 #include <SPI.h>
 #include <RF24.h>
 #include <RF24Network.h>
-#include <RF24Mesh.h>
 #include <DNSServer.h>
 
+// change when uploading to each station
 const int ID = 2;
-  
+
+const int DNS_PORT = 53;
+const int STATIONS_COUNT = 5;
+const int STATIONS_LEN = STATIONS_COUNT + 1;
+
+struct TimeMessage {
+  long team1_time;
+  long team2_time;
+};
+struct StartMessage {
+  long prep_time;
+  long game_time;
+};
+struct PauseMessage {
+  bool pause;
+};
 Preferences preferences;
 static const bool PREF_RO = true;
 static const bool PREF_RW = false;
 static const char *PREFERENCES_NAMESPACE = "preferences";
 static const char *RESULTS_NAMESPACE = "results";
-bool slaves[5];
+
 int MASTER_ID = -1;
 const int TEAM1_LIGHT = 8;
-const int TEAM2_LIGHT = 6;
+const int TEAM2_LIGHT = 7;
 const int TEAM1_BTN = 21;
 const int TEAM2_BTN = 10;
 bool team1_btn_last = HIGH;
@@ -29,10 +44,15 @@ String ssid = String("P") + ID;
 String password =  ssid + "password";
 String Stations = "";
 bool writingResults = false;
-const int CHANNEL = 5;
+const int WIFI_CHANNEL = 6; // TODO: check
 const IPAddress local_IP(192,168,ID*10,8);
 const IPAddress gateway(192,168,ID*10,1);
 const IPAddress subnet(255,255,255,0);
+
+AsyncWebServer server(80);
+DNSServer dnsServer;
+RF24 radio(20, 9); // CE, CSN
+RF24Network network(radio);
 enum {
   START,
   PAUSED,
@@ -46,9 +66,10 @@ int status = START;
 int prev_status = START;
 long prep_time = 0;
 long game_time = 0;
-long team1_time = 0;
-long team2_time = 0;
+long team1_times[] = {-1, -1, -1, -1, -1, -1};
+long team2_times[] = {-1, -1, -1, -1, -1, -1};
 long last_millis = millis();
+long last_sent = millis();
 
 const char * setup_html = R"(
 <!DOCTYPE html>
@@ -72,21 +93,26 @@ const char * setup_html = R"(
       <input type='text' id='game-time' name='game-time' />
       <button type='submit'>Start</button>
     </form>
+    <p>Past Team Red times: %Time1P%</p>
+    <p>Past Team Blue times: %Time2P%</p>
+    <p>Master ID: %MasterID%</p>
+    <form action='/' method='POST'>
+      <select name="master-id" id="master-id">
+        <option value="-1" selected disabled hidden>Choose a master ID:</option>
+        <option value="-1">Master</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select> 
+      <button type='submit'>Select</button>
+    </form>
+
   </body>
 </html>
 )";
-    // <form action='/' method='POST'>
-    //   <select name="master-id" id="master-id">
-    //     <option value="-1" selected disabled hidden>Choose a master ID:</option>
-    //     <option value="1">1</option>
-    //     <option value="2">2</option>
-    //     <option value="3">3</option>
-    //     <option value="4">4</option>
-    //     <option value="5">5</option>
-    //   </select> 
-    //   <button type='submit'>Select</button>
-    // </form>
-
+   
 const char * game_html = R"(
 <!DOCTYPE html>
 <html>
@@ -171,9 +197,6 @@ const char * end_html_short = R"(
 <p>Team Blue time:%Time2%</p>
 )";
 
-AsyncWebServer server(80);
-DNSServer dnsServer;
-
 String formatTime(long time, bool miliseconds) {
   String res = "";
   if (time / 6000 < 10) {
@@ -198,10 +221,24 @@ String formatTime(long time, bool miliseconds) {
   return res;
 }
 
+long sumTimes(long times[STATIONS_LEN]) {
+  long sum = 0;
+  for (int i = 0; i < STATIONS_LEN; ++ i) {
+    if (times[i] != -1) {
+      sum += times[i];
+    }
+  }
+  return sum;
+}
+
 String processor(const String& var)
 {
-  if(var == "Time1") { return formatTime(team1_time, true); }
-  if(var == "Time2") { return formatTime(team2_time, true); }
+  if(var == "Time1") { 
+    return formatTime(sumTimes(team1_times), true); 
+  }
+  if(var == "Time2") {
+    return formatTime(sumTimes(team2_times), true); 
+  }
   if(var == "Time1P" || var == "Time2P") {
     while(writingResults);
     String res = ""; 
@@ -217,9 +254,14 @@ String processor(const String& var)
   if(var == "TimeP") { return formatTime(prep_time, false); }
   if(var == "TimeG") { return formatTime(game_time, false); }
   if (var == "StationID") { return String(ID); }
-  if (var == "MasterID") { return String(MASTER_ID); }
+  if (var == "MasterID") { 
+    if (MASTER_ID == -1) {
+      return "Master";
+    }
+    return String(MASTER_ID); 
+  }
   if (var == "Stations") { return Stations; }
-  if(var == "Winner") { return team1_time == team2_time ? "Draw" : (team1_time > team2_time ? "Team Red" : "Team Blue"); }
+  if(var == "Winner") { return sumTimes(team1_times) == sumTimes(team2_times) ? "Draw" : (sumTimes(team1_times) > sumTimes(team2_times) ? "Team Red" : "Team Blue"); }
   if (var == "Status") {
     switch (status) {
       case PAUSED:
@@ -248,48 +290,113 @@ String processor(const String& var)
   return String();
 }
 
-void getRelay() {
-  Stations = "";
-  for (int i = 0; i < 5; ++ i) {
-    if (slaves[i]) {
-      IPAddress server(192, 168, ID*10, i+11);
-      const int port = 80;
-      if (httpClients[i].connect(server, port, 500)) {
-        httpClients[i].print("GET /gameShort?\r\n");
-        while (httpClients[i].available()) {
-            Stations += httpClients[i].readStringUntil('\n');
-        }
-        httpClients[i].stop();
-      }
+void startGame(long prep_time_ms, long game_time_ms) {
+  if (status != PREP && status != )
+  status = PREP;
+  prep_time = prep_time_ms;
+  game_time = game_time_ms;
+  Serial.print(prep_time_ms);
+  Serial.print(" ");
+  Serial.println(game_time_ms);
+  team1_times[ID] = 0;
+  team2_times[ID] = 0;
+  last_millis = millis();
+}
+
+void endGame() {
+  recordResults();
+  status = END;
+}
+
+void pauseGame(bool pause) {
+  if (status == PAUSED && !pause) {
+    status = prev_status;
+  } else {
+    prev_status = status;
+    status = PAUSED;
+  }
+}
+
+
+// TODO: Speed up by sending once per loop cycle at most
+void sendMessage(const void * data, uint8_t msg_type, size_t size) {
+  for (int i = 0; i <= STATIONS_COUNT; ++ i) {
+    RF24NetworkHeader header(i, msg_type);
+    if (!network.write(header, data, size)) {
+      Serial.print("Error sending message to station ");
+      Serial.println(i);
     }
   }
 }
-void postRelay(bool pause, String prepTime, String gameTime) {
-  Stations = "";
-  for (int i = 0; i < 5; ++ i) {
-    if (i + 1 != ID) {
-      IPAddress server(192, 168, ID*10, i+11);
-      const int port = 80;
-      if (httpClients[i].connect(server, port, 500)) {
-        slaves[i] = true;
-        String params = "POST /game?_short=short";
-        if (!pause) {
-          params += "&prep-time=" + prepTime + "&game-time=" + gameTime;
-        } else {
-          params += "&_method=pause";
+
+void startStations(long prep_time_ms, long game_time_ms) {
+  StartMessage start_msg(prep_time_ms, game_time_ms);
+  sendMessage(&start_msg, 'S', sizeof(start_msg));
+  startGame(prep_time_ms, game_time_ms);
+}
+
+void stopStations() {
+  sendMessage(NULL, 'E', 0);
+  endGame();
+  // TODO: Wait for an update from all stations before returning results
+}
+
+void togglePauseStations(bool pause) {
+  PauseMessage pause_msg = {pause};
+  sendMessage(&pause_msg, 'P', sizeof(pause_msg));
+  pauseGame(pause);
+}
+
+void sendTimes(bool immediate) {
+  if (immedaite || millis() - last_sent >= 2000) {
+    TimeMessage time_msg = {team1_times[ID], team2_times[ID]};
+    sendMessage(&time_msg, 'T', sizeof(time_msg));
+    last_sent = millis();
+  }
+}
+
+void recvRadio() {
+  while (network.available()) {
+    RF24NetworkHeader header;
+    network.peek(header);
+    Serial.println(char(header.type));
+    switch (header.type) {
+      // time of another station
+      case 'T':
+        TimeMessage time_msg;
+        network.read(header, &time_msg, sizeof(time_msg));
+        if (header.from_node == 0) { 
+          header.from_node = MASTER_ID == -1 ? ID : MASTER_ID; 
         }
-        params += " HTTP/1.1\r\nHost: ";
-        params += "192.168." + String(ID * 10) + ".8\r\n";
-        params += "Content-Type: application/x-www-form-urlencoded\r\n";
-        params += "Connection: keep-alive\r\n";
-        httpClients[i].print(params);
-        while (httpClients[i].available()) {
-            Stations += httpClients[i].readStringUntil('\n');
-        }
-        httpClients[i].stop();
-      }
+        Serial.print(time_msg.team1_time);
+        Serial.print(" ");
+        Serial.println(time_msg.team2_time);
+        team1_times[header.from_node] = time_msg.team1_time;
+        team2_times[header.from_node] = time_msg.team2_time;
+        break;
+      // start game
+      case 'S':
+        StartMessage start_msg;
+        network.read(header, &start_msg, sizeof(start_msg));
+        startGame(start_msg.prep_time, start_msg.game_time);
+        break;
+      // pause game
+      case 'P':
+        PauseMessage pause_msg;
+        network.read(header, &pause_msg, sizeof(pause_msg));
+        pauseGame(pause_msg.pause);
+        break;
+      // end game
+      case 'E':
+        endGame();
+        network.read(header, NULL, 0);
+        sendTimes(true);
+        break;
+      default:
+        // prevent buffer fill up
+        network.read(header, NULL, 0);
+        break;
     }
-    
   }
 }
 
@@ -308,7 +415,6 @@ void blinkLightsBlocking(int count) {
 }
 
 void recordResults() {
-
   writingResults = true;
   preferences.begin(RESULTS_NAMESPACE, PREF_RO);
   long team1Results[5], team2Results[5], team1ResultsNew[5], team2ResultsNew[5];
@@ -319,8 +425,8 @@ void recordResults() {
     team2ResultsNew[i] = team2Results[i - 1];
   }
   preferences.end();
-  team1ResultsNew[0] = team1_time;
-  team2ResultsNew[0] = team2_time;
+  team1ResultsNew[0] = sumTimes(team1_times);
+  team2ResultsNew[0] = sumTimes(team2_times);
   preferences.begin(RESULTS_NAMESPACE, PREF_RW);
   preferences.putBytes("team1", &team1ResultsNew, sizeof(team1ResultsNew));
   preferences.putBytes("team2", &team2ResultsNew, sizeof(team2ResultsNew));
@@ -343,8 +449,6 @@ void setup(){
   preferences.begin(PREFERENCES_NAMESPACE, PREF_RO);
   MASTER_ID = preferences.getInt("master_id", -1);
   preferences.end();
-  // FIX!!
-  // MASTER_ID = 1;
   if (MASTER_ID != -1 && !digitalRead(TEAM1_BTN) && !digitalRead(TEAM2_BTN)) {
     int startTimeHold = millis();
     while(!digitalRead(TEAM1_BTN) && !digitalRead(TEAM2_BTN) && millis() - startTimeHold < 3000);
@@ -368,36 +472,17 @@ void setup(){
   }
   preferences.end();
 
-
+  Serial.print("MASTER_ID: ");
   Serial.println(MASTER_ID);
-  if (MASTER_ID != -1) {
-    // slave
-    const IPAddress slave_local_IP(192,168,MASTER_ID*10,ID+10);
-    const IPAddress slave_gateway(192,168,MASTER_ID*10,1);
-    // FIX!!
-    String conn_ssid = "P" + String(MASTER_ID);
-    Serial.println(conn_ssid);
-    String conn_password =  conn_ssid + "password";
-    WiFi.mode(WIFI_STA);
-    Serial.println(WiFi.config(slave_local_IP, slave_gateway, subnet) ? "Ready" : "Failed!");
-    while(!(WiFi.status() == WL_CONNECTED)) {
-      WiFi.begin(conn_ssid.c_str(), conn_password.c_str(), CHANNEL);
-      WiFi.setTxPower(WIFI_POWER_8_5dBm);
-      delay(5000);
-    }
-    Serial.println(WiFi.localIP());
-    blinkLightsBlocking(3);
-  } else {
-    // master
-    WiFi.mode(WIFI_AP);
-    Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
-    Serial.println(WiFi.softAP(ssid, password, CHANNEL));
-    WiFi.setTxPower(WIFI_POWER_8_5dBm);
-    Serial.println(WiFi.softAPIP());
-    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-  }
-
-  // setup
+  radio.begin();
+  radio.setPALevel(RF24_PA_MIN, 0);
+  WiFi.mode(WIFI_AP);
+  Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
+  Serial.println(WiFi.softAP(ssid, password)); // Serial.println(WiFi.softAP(ssid, password, CHANNEL));
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
+  Serial.println(WiFi.softAPIP());
+  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+  // server setup
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     status = START;
     request->send_P(200, "text/html", setup_html, processor);
@@ -410,7 +495,9 @@ void setup(){
       preferences.putInt("master_id", request->getParam("master-id", true)->value().toInt());
       preferences.end();
       request->send_P(200, "text/html", setup_html, processor);
-    } else {
+      ESP.restart();
+    } else { 
+      stopStations();
       request->send_P(200, "text/html", end_html, processor);
     }
   });
@@ -419,30 +506,22 @@ void setup(){
     blinkLightsBlocking(1);
     // paused button
     if (request->hasParam("_method", true) && request->getParam("_method", true)->value() == "pause") {
-      // postRelay(true, "", "");
-      if (status == PAUSED) {
-        status = prev_status;
-        // Serial.println(prev_status);
-      } else {
-        prev_status = status;
-        status = PAUSED;
-      }
+      // pause all stations, including this one
+      togglePauseStations((status != PAUSED));
     } else {
+      // process prep and game time from incoming request string
       String prep_time_str = request->getParam("prep-time", true)->value();
       String game_time_str = request->getParam("game-time", true)->value();
-      // postRelay(false, prep_time_str, game_time_str);
-      status = PREP;
       int prep_delim = prep_time_str.indexOf(':');
       int game_delim = game_time_str.indexOf(':');
       int prep_mins = prep_delim == -1 ? prep_time_str.toInt() : prep_time_str.substring(0, prep_delim).toInt();
       int game_mins = game_delim == -1 ? game_time_str.toInt() : game_time_str.substring(0, game_delim).toInt();
       int prep_secs = prep_delim == -1 ? 0 : prep_time_str.substring(prep_delim + 1, prep_time_str.length()).toInt();
       int game_secs = game_delim == -1 ? 0 : game_time_str.substring(game_delim + 1, game_time_str.length()).toInt();
-      prep_time = (prep_mins * 60 + prep_secs) * 1000;
-      game_time = (game_mins * 60 + game_secs) * 1000;
-      team1_time = 0;
-      team2_time = 0;
-      last_millis = millis();
+      long prep_time_ms = (prep_mins * 60 + prep_secs) * 1000;
+      long game_time_ms = (game_mins * 60 + game_secs) * 1000;
+      // start all stations, including this one
+      startStations(prep_time_ms, game_time_ms);
     }
     if (request->hasParam("_short", true) && request->getParam("_short", true)->value() == "short") {
       request->send_P(200, "text/httml", game_html_short, processor);
@@ -452,7 +531,6 @@ void setup(){
   });
   // end
   server.on("/game", HTTP_GET, [](AsyncWebServerRequest *request){
-    // getRelay();
     if (status == END) {
       request->send_P(200, "text/html", end_html, processor);
     } else {
@@ -481,21 +559,36 @@ void setup(){
 
   server.begin();
   blinkLightsBlocking(2);
+  if (MASTER_ID != -1) {
+    // slave
+    network.begin(90 + MASTER_ID, ID);
+  } else {
+    // master
+    // Connect to the mesh
+    network.begin(90 + ID, 0);
+  }
+  // Serial.println(mesh.checkConnection());
+  Serial.println("Network ready");
+  blinkLightsBlocking(3);
 }
 
 void loop(){
+  network.update();
   dnsServer.processNextRequest();
+  // read from network
+  recvRadio();
   if (status == TEAM1 || status == TEAM2 || status == NEUTRAL) {
     if (status == TEAM1) {
-      team1_time += millis() - last_millis;
+      team1_times[ID] += millis() - last_millis;
       digitalWrite(TEAM1_LIGHT, HIGH);     
       digitalWrite(TEAM2_LIGHT, LOW);
     }
     if (status == TEAM2) {
-      team2_time += millis() - last_millis;
+      team2_times[ID] += millis() - last_millis;
       digitalWrite(TEAM2_LIGHT, HIGH);     
       digitalWrite(TEAM1_LIGHT, LOW);
     }
+    sendTimes(false);
     if (team1_btn_last != digitalRead(TEAM1_BTN) && team1_btn_last == LOW) {
       status = TEAM1;
     }
@@ -504,9 +597,10 @@ void loop(){
     }
     game_time = max(game_time - (long(millis()) - last_millis), 0L);
     if (game_time <= 0) {
-      recordResults();
-      status = END;
+      endGame();
+      sendTime(true);
     }
+    // blinking when neutral  
     if  (status == NEUTRAL && millis() - last_blink_millis >= 1000) {
       blink_last = !blink_last;
       digitalWrite(TEAM1_LIGHT, !blink_last);
