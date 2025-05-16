@@ -3,23 +3,257 @@
   <head>
     <title>King of the Hill</title>
     <style>
-      body > * {
-        display: block;
+      /* General Styling */
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f7f7f7; /* Light neutral background */
+        color: #333;
+        margin: 0;
+        padding: 2%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* Title Styling */
+      h3 {
+        font-size: 2rem; /* Slightly smaller title for better fit */
+        font-weight: bold;
+        text-align: center;
+        margin: 0 0 0.5em 0; /* Adjusted margin to reduce space */
+        letter-spacing: 2px; /* Slight letter spacing for readability */
+      }
+
+      /* Title letters with different colors */
+      h3 span {
+        display: inline-block;
+        transition: color 0.5s ease-in-out;
+      }
+
+      /* Styling for status text */
+      p {
+        font-size: 1.2rem;
+        margin: 0.5em 0;
+        text-align: center;
+      }
+
+      /* Button styling */
+      button {
+        background-color: #ff9800;
+        color: white;
+        border: none;
+        padding: 0.7em;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        margin: 1em;
+        font-size: 1.2rem;
+      }
+
+      button:hover {
+        background-color: #f57c00;
+      }
+
+      /* Form container */
+      div {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      /* Info section (card style) */
+      .info-section {
+        max-width: 600px; /* Set a max width for the card */
+        width: 100%;
+        padding: 2em;
+        margin-top: 1.5em; /* Reduced margin-top to reduce space */
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* Table for stations */
+      .stations-table {
+        width: 100%;
+        table-layout: fixed; /* Equal column width */
+        border-collapse: collapse;
+        margin-top: 1em;
+      }
+
+      .stations-table th,
+      .stations-table td {
+        padding: 1em;
+        text-align: right; /* Right-align all cells */
+        border: 1px solid #ddd;
+        font-size: 1rem;
+      }
+
+      .stations-table th {
+        background-color: #f9f9f9;
+        color: #333;
+      }
+
+      .stations-table tr:nth-child(even) {
+        background-color: #f5f5f5;
+      }
+
+      .stations-table tr:last-child {
+        font-weight: bold;
+      }
+
+      /* Table for Prep and Game Time */
+      .time-table {
+        width: 100%;
+        max-width: 400px;
+        table-layout: fixed;
+        margin-top: 1em;
+        border-collapse: collapse;
+      }
+
+      .time-table td {
+        padding: 0.8em;
+        text-align: right; /* Right-align cells */
+        border: 1px solid #ddd;
+        font-size: 1rem;
+      }
+
+      .time-table th {
+        text-align: center;
+        padding: 0.8em;
+        background-color: #f9f9f9;
+        color: #333;
+      }
+
+      /* Responsive Styling */
+      @media (max-width: 640px) {
+        button {
+          width: 100%; /* Full-width buttons on mobile */
+        }
+
+        /* Adjust card layout for small screens */
+        .info-section {
+          max-width: 90%; /* Reduce card width for small screens */
+          padding: 1.5em; /* Adjust padding */
+          margin-top: 1em; /* Adjust top margin for smaller devices */
+        }
+
+        p {
+          font-size: 1rem; /* Adjust text size on smaller screens */
+        }
+
+        button {
+          font-size: 1rem; /* Adjust button size */
+        }
+
+        .stations-table th,
+        .stations-table td {
+          font-size: 0.95rem; /* Adjust font size for table */
+        }
       }
     </style>
   </head>
   <body>
-    <h3>{{Status}}</h3>
-    <p>Team 1 time:%Time1%</p>
-    <p>Team 2 time:%Time2T</p>
+    <!-- Title: King of the Hill with colorful letters -->
+    <h3>
+      <span style="color: #ff5722">K</span>
+      <span style="color: #9c27b0">i</span>
+      <span style="color: #4caf50">n</span>
+      <span style="color: #ff9800">g</span>
+      <span style="color: #0288d1"> </span>
+      <span style="color: #ff5722">o</span>
+      <span style="color: #9c27b0">f</span>
+      <span style="color: #4caf50"> </span>
+      <span style="color: #ff9800">t</span>
+      <span style="color: #0288d1">h</span>
+      <span style="color: #ff5722">e</span>
+      <span style="color: #9c27b0"> </span>
+      <span style="color: #4caf50">H</span>
+      <span style="color: #ff9800">i</span>
+      <span style="color: #0288d1">l</span>
+      <span style="color: #ff5722">l</span>
+    </h3>
+
+    <!-- Status & Timer Info -->
+    <div class="info-section">
+      <p><strong>Status: </strong>%Status%</p>
+
+      <!-- Prep and Game Time Table -->
+      <table class="time-table">
+        <thead>
+          <tr>
+            <th>Prep Time Left</th>
+            <th>Game Time Left</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>%TimeP%</td>
+            <td>%TimeG%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Stations Table with placeholders for each station's times -->
+      <table class="stations-table">
+        <thead>
+          <tr>
+            <th>Station</th>
+            <th>Team Red Times</th>
+            <th>Team Blue Times</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Station 1</td>
+            <td>%Station1Total%</td>
+            <td>%Station1%</td>
+          </tr>
+          <tr>
+            <td>Station 2</td>
+            <td>%Station2Total%</td>
+            <td>%Station2%</td>
+          </tr>
+          <tr>
+            <td>Station 3</td>
+            <td>%Station3Total%</td>
+            <td>%Station3%</td>
+          </tr>
+          <tr>
+            <td>Station 4</td>
+            <td>%Station4Total%</td>
+            <td>%Station4%</td>
+          </tr>
+          <tr>
+            <td>Station 5</td>
+            <td>%Station5Total%</td>
+            <td>%Station5%</td>
+          </tr>
+          <tr>
+            <td>Total</td>
+            <td>%TotalRed%</td>
+            <td>%TotalBlue%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Button Controls -->
     <div>
-      <form action="">
-        <button type="submit">Pause</button>
-      </form>
-      <form action="">
+      <form action="/" method="POST">
         <button type="submit">Stop</button>
       </form>
-      <button onClick="window.location.reload();">Refresh Page</button>
+      <form action="/game" method="POST">
+        <input type="hidden" name="_method" id="_method" value="pause" />
+        <button type="submit">Pause/Unpause</button>
+      </form>
+      <form action="/game" method="GET">
+        <button type="submit">Refresh Page</button>
+      </form>
     </div>
   </body>
 </html>

@@ -1,20 +1,256 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <title>King of the Hill</title>
     <style>
-      form > * {
-        display: block;
-      }
+        /* General Styling */
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f7f7f7;
+            /* Light neutral background */
+            color: #333;
+            margin: 0;
+            padding: 2%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Title Styling */
+        .page-title {
+            font-size: 2.5rem; /* Slightly smaller title for better fit */
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0.5em; /* Reduced space between title and first card */
+            letter-spacing: 2px;
+            /* Slight letter spacing for readability */
+        }
+
+        /* Style for individual title letters */
+        .title-letter {
+            display: inline-block;
+            transition: color 0.5s ease-in-out;
+        }
+
+        /* Form and Info Block Container */
+        form,
+        .info-block {
+            max-width: 600px;
+            /* Increased card width */
+            width: 100%;
+            padding: 1.5em;
+            margin: 1em 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            background: white;
+            box-sizing: border-box;
+        }
+
+        /* Input, select, label, and button styles */
+        label,
+        input,
+        select,
+        button {
+            font-size: 1.2rem;
+            margin: 0.5em 0;
+            width: 100%;
+            box-sizing: border-box;
+            /* Ensures no overflow */
+        }
+
+        input,
+        select {
+            padding: 0.5em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 0.7em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        button:active {
+            background-color: #f57c00;
+        }
+
+        /* Table inside the info-block */
+        .info-block table {
+            width: 100%;
+            table-layout: fixed;
+            /* Makes each column equal width */
+            border-collapse: collapse;
+        }
+
+        .info-block th {
+            text-align: center;
+            /* Center-align column headers */
+            border: 1px solid #ddd;
+            padding: 0.5em;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .info-block td {
+            border: 1px solid #ddd;
+            padding: 0.5em;
+            text-align: center;
+            /* Center-align cells by default */
+            font-size: 1rem;
+        }
+
+        .info-block td div {
+            display: inline-block;
+            /* Prevent div from stretching */
+            text-align: right;
+            /* Right-align content within the div */
+            width: 100%;
+            /* Ensure it takes full width */
+        }
+
+        .info-block td div span.sub-time {
+            display: block;
+            /* Make sub-time appear on a new line */
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .info-block tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+        /* Formatting for sub-time */
+        .sub-time {
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .info-block p {
+            font-size: 1rem;
+            margin: 0.5em 0;
+            text-align: center;
+        }
+
+        /* Responsive Styling */
+        @media (max-width: 640px) {
+            .page-title {
+                font-size: 2rem; /* Adjust title size for small screens */
+                margin-bottom: 0.3em; /* Reduce space between title and form */
+            }
+
+            form,
+            .info-block {
+                max-width: 90%;
+                /* Card width adjustment for smaller screens */
+                padding: 1em;
+                /* Adjust padding */
+                margin-top: 0.5em; /* Reduced space at the top of the form */
+            }
+
+            label,
+            input,
+            select,
+            button {
+                font-size: 1rem;
+                /* Smaller font size for mobile */
+            }
+
+            .info-block th,
+            .info-block td {
+                font-size: 0.95rem;
+                /* Adjust font size in table */
+            }
+
+            .sub-time {
+                font-size: 0.75rem;
+                /* Adjust sub-time font size */
+            }
+
+            button {
+                width: 100%;
+                /* Full-width buttons on mobile */
+            }
+        }
     </style>
-  </head>
-  <body>
-    <form action="/">
-      <label for="prep-time">Preparation duration:</label>
-      <input type="text" id="prep-time" name="prep-time" />
-      <label for="game-time">Game duration:</label>
-      <input type="text" id="game-time" name="game-time" />
-      <button type="submit">Start</button>
+</head>
+
+<body>
+
+    <h1 class="page-title">
+        <span class="title-letter" style="color: #ff5722;">K</span>
+        <span class="title-letter" style="color: #9c27b0;">i</span>
+        <span class="title-letter" style="color: #4caf50;">n</span>
+        <span class="title-letter" style="color: #ff9800;">g</span>
+        <span class="title-letter" style="color: #0288d1;"> </span> <!-- Space between words -->
+        <span class="title-letter" style="color: #ff5722;">o</span>
+        <span class="title-letter" style="color: #9c27b0;">f</span>
+        <span class="title-letter" style="color: #4caf50;"> </span> <!-- Space between words -->
+        <span class="title-letter" style="color: #ff9800;">t</span>
+        <span class="title-letter" style="color: #0288d1;">h</span>
+        <span class="title-letter" style="color: #ff5722;">e</span>
+        <span class="title-letter" style="color: #9c27b0;"> </span> <!-- Space between words -->
+        <span class="title-letter" style="color: #4caf50;">H</span>
+        <span class="title-letter" style="color: #ff9800;">i</span>
+        <span class="title-letter" style="color: #0288d1;">l</span>
+        <span class="title-letter" style="color: #ff5722;">l</span>
+        <span class="title-letter" style="color: #9c27b0;"> </span> <!-- Space between words -->
+        <span class="title-letter" style="color: #4caf50;"></span>
+    </h1>
+
+    <form action="/game" method="POST">
+        <label for="prep-time">Preparation duration:</label>
+        <input type="text" id="prep-time" name="prep-time" />
+        <label for="game-time">Game duration:</label>
+        <input type="text" id="game-time" name="game-time" />
+        <button type="submit">Start</button>
     </form>
-  </body>
+
+    <div class="info-block">
+        <table>
+            <thead>
+                <tr>
+                    <th>Team Red Times</th>
+                    <th>Team Blue Times</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div>
+                            <strong>Total:</strong> %Time1P1%<br>
+                            <span class="sub-time"><strong>Station %StationID%:</strong>%StationTime1P1%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <strong>Total:</strong> %Time2P1%<br>
+                            <span class="sub-time"><strong>Station %StationID%:</strong>%StationTime2P1</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form action="/" method="POST">
+        <label for="master-id">Master ID: %MasterID%</p>
+        <select name="master-id" id="master-id">
+            <option value="-1" selected disabled hidden>Choose a master ID:</option>
+            <option value="-1">Master</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select>
+        <button type="submit">Select</button>
+    </form>
+</body>
+
 </html>
