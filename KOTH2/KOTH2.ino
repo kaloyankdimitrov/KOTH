@@ -17,7 +17,7 @@ const int CURRENT_TIMES_BUFFER_LEN = 750;
 const int PAST_TIMES_BUFFER_LEN = 5000;
 
 struct TimeMessage {
-  long team1_time;
+  long team1_time;  
   long team2_time;
 };
 struct StartMessage {
