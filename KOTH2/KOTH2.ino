@@ -4,12 +4,10 @@
 #include <SPI.h>
 #include <RF24.h>
 #include <RF24Network.h>
-#include <DNSServer.h>
 
 // change when uploading to each station
-const int ID = 02;
+const int ID = 05;
 
-const int DNS_PORT = 53;
 const int HISTORY_LEN = 5;
 const int STATIONS_COUNT = 5;
 
@@ -47,12 +45,11 @@ String ssid = String("P") + ID;
 String password = ssid + "password";
 String Stations = "";
 bool writingResults = false;
-const IPAddress local_IP(192, 168, ID * 10, 8);
-const IPAddress gateway(192, 168, ID * 10, 1);
+const IPAddress local_IP(10, 0, 0, 10);
+const IPAddress gateway(0, 0, 0, 0);
 const IPAddress subnet(255, 255, 255, 0);
 
 AsyncWebServer server(80);
-DNSServer dnsServer;
 RF24 radio(20, 9);  // CE, CSN
 RF24Network network(radio);
 enum {
@@ -976,7 +973,7 @@ void sendMessage(const void *data, uint8_t msg_type, size_t size) {
 }
 
 void startStations(long prep_time_ms, long game_time_ms) {
-  StartMessage start_msg(prep_time_ms, game_time_ms);
+  StartMessage start_msg {prep_time_ms, game_time_ms};
   sendMessage(&start_msg, 'S', sizeof(start_msg));
   startGame(prep_time_ms, game_time_ms);
 }
@@ -1094,6 +1091,12 @@ void setup() {
   // read MASTER_ID from memory and reset it with button combination
   preferences.begin(PREFERENCES_NAMESPACE, PREF_RO);
   MASTER_ID = preferences.getInt("master_id", -1);
+  if (MASTER_ID == ID) {
+    MASTER_ID = -1;
+    preferences.begin(PREFERENCES_NAMESPACE, PREF_RW);
+    preferences.putInt("master_id", -1);
+    preferences.end();
+  }
   preferences.end();
   if (MASTER_ID != -1 && !digitalRead(TEAM1_BTN) && !digitalRead(TEAM2_BTN)) {
     int startTimeHold = millis();
@@ -1130,13 +1133,12 @@ void setup() {
   Serial.print("MASTER_ID: ");
   Serial.println(MASTER_ID);
   radio.begin();
-  radio.setPALevel(RF24_PA_LOW, 0);
+  radio.setPALevel(RF24_PA_MIN, 0);
   WiFi.mode(WIFI_AP);
   Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
   Serial.println(WiFi.softAP(ssid, password));
   WiFi.setTxPower(WIFI_POWER_8_5dBm);
   Serial.println(WiFi.softAPIP());
-  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   // server setup
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (status == START || status == END) {
@@ -1207,13 +1209,6 @@ void setup() {
       request->send_P(200, "text/html", game_html, processor);
     }
   });
-  // for dns server
-  server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->redirect("/");
-  });
-  server.on("/fwlink", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->redirect("/");
-  });
 
   server.begin();
   blinkLightsBlocking(2);
@@ -1232,7 +1227,6 @@ void setup() {
 
 void loop() {
   network.update();
-  dnsServer.processNextRequest();
   // read from network
   recvRadio();
   if (status == TEAM1 || status == TEAM2 || status == NEUTRAL) {
