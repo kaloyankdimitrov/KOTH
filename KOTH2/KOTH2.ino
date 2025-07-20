@@ -5,8 +5,12 @@
 #include <RF24.h>
 #include <RF24Network.h>
 
+#ifndef RF24NetworkMulticast
+#define RF24NetworkMulticast
+#endif
+
 // change when uploading to each station
-const int ID = 05;
+const int ID = 02;
 
 const int HISTORY_LEN = 5;
 const int STATIONS_COUNT = 5;
@@ -17,6 +21,7 @@ const int PAST_TIMES_BUFFER_LEN = 5000;
 struct TimeMessage {
   long team1_time;  
   long team2_time;
+  bool end;
 };
 struct StartMessage {
   long prep_time;
@@ -960,15 +965,9 @@ void pauseGame(bool pause) {
 
 // TODO: Speed up by sending once per loop cycle at most
 void sendMessage(const void *data, uint8_t msg_type, size_t size) {
-  if (MASTER_ID == -1) {
-    // master
-    for (int i = 01; i <= STATIONS_COUNT; ++ i) {  
-      RF24NetworkHeader header(i, msg_type);
-      if (!network.write(header, data, size)) {
-        Serial.print("Error sending message to station ");
-        Serial.println(i);
-      }
-    }
+  RF24NetworkHeader header(0, msg_type);
+  if (!network.multicast(header, data, size, 0)) {
+    Serial.print("Error sending multicast message");
   }
 }
 
@@ -991,8 +990,9 @@ void togglePauseStations(bool pause) {
 }
 
 void sendTimes(bool immediate) {
-  if (immediate || millis() - last_sent >= 2000) {
-    TimeMessage time_msg = { team1_times[ID], team2_times[ID] };
+  // slave only
+  if (/*MASTER_ID != -1 && */(immediate || millis() - last_sent >= 2000)) {
+    TimeMessage time_msg = { team1_times[ID], team2_times[ID], status == END };
     sendMessage(&time_msg, 'T', sizeof(time_msg));
     last_sent = millis();
   }
@@ -1003,19 +1003,21 @@ void recvRadio() {
     RF24NetworkHeader header;
     network.peek(header);
     Serial.println(char(header.type));
+    Serial.println(header.from_node);
+    uint16_t from_node = header.from_node;
     switch (header.type) {
       // time of another station
       case 'T':
         TimeMessage time_msg;
         network.read(header, &time_msg, sizeof(time_msg));
-        if (header.from_node == 0) {
-          header.from_node = MASTER_ID == -1 ? ID : MASTER_ID;
+        if (from_node == 0) {
+          from_node = MASTER_ID == -1 ? ID : MASTER_ID;
         }
         Serial.print(time_msg.team1_time);
         Serial.print(" ");
         Serial.println(time_msg.team2_time);
-        team1_times[header.from_node] = time_msg.team1_time;
-        team2_times[header.from_node] = time_msg.team2_time;
+        team1_times[from_node] = time_msg.team1_time;
+        team2_times[from_node] = time_msg.team2_time;
         break;
       // start game
       case 'S':
@@ -1035,6 +1037,7 @@ void recvRadio() {
         network.read(header, NULL, 0);
         sendTimes(true);
         break;
+      // register slave
       default:
         // prevent buffer fill up
         network.read(header, NULL, 0);
@@ -1078,7 +1081,7 @@ void recordResults() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(TEAM1_LIGHT, OUTPUT);
   pinMode(TEAM2_LIGHT, OUTPUT);
   digitalWrite(TEAM1_LIGHT, LOW);
@@ -1133,7 +1136,8 @@ void setup() {
   Serial.print("MASTER_ID: ");
   Serial.println(MASTER_ID);
   radio.begin();
-  radio.setPALevel(RF24_PA_MIN, 0);
+  radio.setPALevel(RF24_PA_MAX, true);
+  radio.setDataRate(RF24_250KBPS);
   WiFi.mode(WIFI_AP);
   Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
   Serial.println(WiFi.softAP(ssid, password));
@@ -1154,11 +1158,11 @@ void setup() {
       preferences.begin(PREFERENCES_NAMESPACE, PREF_RW);
       preferences.putInt("master_id", request->getParam("master-id", true)->value().toInt());
       preferences.end();
-      request->send_P(200, "text/html", setup_html, processor);
+      request->redirect("/");
       ESP.restart();
     } else {
       stopStations();
-      request->send_P(200, "text/html", end_html, processor);
+      request->redirect("/game");
     }
   });
   // start; pause/unpause
@@ -1183,11 +1187,7 @@ void setup() {
       // start all stations, including this one
       startStations(prep_time_ms, game_time_ms);
     }
-    if (request->hasParam("_short", true) && request->getParam("_short", true)->value() == "short") {
-      request->send_P(200, "text/httml", game_html, processor);
-    } else {
-      request->send_P(200, "text/html", game_html, processor);
-    }
+    request->redirect("/game");
   });
   // end
   server.on("/game", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -1201,14 +1201,6 @@ void setup() {
   server.on("/end", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send_P(200, "texthtml", end_html, processor);
   });
-  // end
-  server.on("/gameShort", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (status == END) {
-      request->send_P(200, "text/html", end_html, processor);
-    } else {
-      request->send_P(200, "text/html", game_html, processor);
-    }
-  });
 
   server.begin();
   blinkLightsBlocking(2);
@@ -1220,7 +1212,8 @@ void setup() {
     // Connect to the mesh
     network.begin(90 + ID, 0);
   }
-  // Serial.println(mesh.checkConnection());
+  network.multicastLevel(0);
+  network.multicastRelay = true;
   Serial.println("Network ready");
   blinkLightsBlocking(3);
 }
@@ -1240,7 +1233,7 @@ void loop() {
       digitalWrite(TEAM2_LIGHT, HIGH);
       digitalWrite(TEAM1_LIGHT, LOW);
     }
-    // sendTimes(false);
+    sendTimes(false);
     if (team1_btn_last != digitalRead(TEAM1_BTN) && team1_btn_last == LOW) {
       status = TEAM1;
     }
