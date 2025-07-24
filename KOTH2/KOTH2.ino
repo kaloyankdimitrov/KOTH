@@ -5,12 +5,8 @@
 #include <RF24.h>
 #include <RF24Network.h>
 
-#ifndef RF24NetworkMulticast
-#define RF24NetworkMulticast
-#endif
-
 // change when uploading to each station
-const int ID = 02;
+const int ID = 03;
 
 const int HISTORY_LEN = 5;
 const int STATIONS_COUNT = 5;
@@ -965,9 +961,20 @@ void pauseGame(bool pause) {
 
 // TODO: Speed up by sending once per loop cycle at most
 void sendMessage(const void *data, uint8_t msg_type, size_t size) {
-  RF24NetworkHeader header(0, msg_type);
-  if (!network.multicast(header, data, size, 0)) {
-    Serial.print("Error sending multicast message");
+  RF24NetworkHeader header(00, msg_type);
+  if (MASTER_ID == -1) {
+    // master
+    for (int i = 01; i <= STATIONS_COUNT; ++ i) {
+      RF24NetworkHeader header(i, msg_type);
+      if (!network.write(header, data, size)) {
+        Serial.print("Error sending message to station ");
+        Serial.println(i);
+      }
+    }
+  } else {
+    if (!network.multicast(header, data, size, 0)) {
+      Serial.println("Error sending unicast message");
+    }
   }
 }
 
@@ -991,11 +998,11 @@ void togglePauseStations(bool pause) {
 
 void sendTimes(bool immediate) {
   // slave only
-  if (/*MASTER_ID != -1 && */(immediate || millis() - last_sent >= 2000)) {
-    TimeMessage time_msg = { team1_times[ID], team2_times[ID], status == END };
-    sendMessage(&time_msg, 'T', sizeof(time_msg));
-    last_sent = millis();
-  }
+  // if (MASTER_ID != -1 && (immediate || millis() - last_sent >= 2000)) {
+  //   TimeMessage time_msg = { team1_times[ID], team2_times[ID], status == END };
+  //   sendMessage(&time_msg, 'T', sizeof(time_msg));
+  //   last_sent = millis();
+  // }
 }
 
 void recvRadio() {
@@ -1206,14 +1213,11 @@ void setup() {
   blinkLightsBlocking(2);
   if (MASTER_ID != -1) {
     // slave
-    network.begin(90 + MASTER_ID, ID);
+    network.begin(90 + MASTER_ID * 3, ID);
   } else {
     // master
-    // Connect to the mesh
-    network.begin(90 + ID, 0);
+    network.begin(90 + ID * 3, 00);
   }
-  network.multicastLevel(0);
-  network.multicastRelay = true;
   Serial.println("Network ready");
   blinkLightsBlocking(3);
 }
