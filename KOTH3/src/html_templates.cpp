@@ -146,7 +146,7 @@ const char *setup_html = R"(
     <form action="/" method="POST">
         <label for="network-id">Network ID: <strong>%NetworkID%</strong></label>
         <input type="number" id="network-id" name="network-id" min="1" max="255"
-               placeholder="Enter network ID (1–255) " />
+               placeholder="Enter network ID (1-255) " />
         <button type="submit">Set Network ID</button>
     </form>
   </body>
