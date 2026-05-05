@@ -14,6 +14,23 @@ const IPAddress local_IP(10, 0, 0, 10);
 const IPAddress gateway(0, 0, 0, 0);
 const IPAddress subnet(255, 255, 255, 0);
 
+static String escapeJsonString(const String &input) {
+  String output;
+  output.reserve(input.length() + 8);
+  for (size_t i = 0; i < input.length(); ++i) {
+    char c = input[i];
+    switch (c) {
+      case '"': output += "\\\""; break;
+      case '\\': output += "\\\\"; break;
+      case '\n': output += "\\n"; break;
+      case '\r': output += "\\r"; break;
+      case '\t': output += "\\t"; break;
+      default: output += c; break;
+    }
+  }
+  return output;
+}
+
 void setupWiFi() {
   WiFi.mode(WIFI_AP);
   Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "AP config: OK" : "AP config: FAILED");
@@ -77,6 +94,17 @@ void setupWebServer() {
       request->send(200, "text/html", end_html, processor);
     else
       request->send(200, "text/html", game_html, processor);
+  });
+
+  // GET /game-data → live game data for dashboard updates
+  server.on("/game-data", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"status\":\"" + escapeJsonString(processor("Status")) + "\",";
+    json += "\"timeP\":\"" + escapeJsonString(processor("TimeP")) + "\",";
+    json += "\"timeG\":\"" + escapeJsonString(processor("TimeG")) + "\",";
+    json += "\"currentTimes\":\"" + escapeJsonString(processor("CurrentTimes")) + "\"";
+    json += "}";
+    request->send(200, "application/json", json);
   });
 
   // GET /end

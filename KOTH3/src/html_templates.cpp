@@ -257,16 +257,16 @@ span { display: inline-block; transition: color 0.5s ease-in-out; }
     </h3>
 
     <div class="info-section">
-      <p><strong>Status: </strong>%Status%</p>
+      <p><strong>Status: </strong><span id="status-value">%Status%</span></p>
       <table class="time-table">
         <thead><tr><th>Prep Time Left</th><th>Game Time Left</th></tr></thead>
-        <tbody><tr><td>%TimeP%</td><td>%TimeG%</td></tr></tbody>
+        <tbody><tr><td id="prep-time">%TimeP%</td><td id="game-time">%TimeG%</td></tr></tbody>
       </table>
       <table class="stations-table">
         <thead>
           <tr><th>Station</th><th>Team Red Time(s)</th><th>Team Blue Time(s)</th></tr>
         </thead>
-        <tbody>%CurrentTimes%</tbody>
+        <tbody id="current-times-body">%CurrentTimes%</tbody>
       </table>
     </div>
 
@@ -282,6 +282,31 @@ span { display: inline-block; transition: color 0.5s ease-in-out; }
         <button type="submit">Refresh Page</button>
       </form>
     </div>
+    <script>
+      (function() {
+        const statusEl = document.getElementById("status-value");
+        const prepEl = document.getElementById("prep-time");
+        const gameEl = document.getElementById("game-time");
+        const timesBody = document.getElementById("current-times-body");
+
+        function updateDashboard() {
+          fetch("/game-data")
+            .then((response) => response.json())
+            .then((data) => {
+              if (statusEl) statusEl.textContent = data.status || "";
+              if (prepEl) prepEl.textContent = data.timeP || "";
+              if (gameEl) gameEl.textContent = data.timeG || "";
+              if (timesBody && data.currentTimes != null) {
+                timesBody.innerHTML = data.currentTimes;
+              }
+            })
+            .catch(() => {});
+        }
+
+        updateDashboard();
+        setInterval(updateDashboard, 1000);
+      })();
+    </script>
   </body>
 </html>
 )";
