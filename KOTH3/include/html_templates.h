@@ -3,14 +3,6 @@
 
 #include <Arduino.h>
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  HTML / template strings
-// ═══════════════════════════════════════════════════════════════════════════════
-
-extern const char *setup_html;
-extern const char *game_html;
-extern const char *end_html;
-
 // ─── HTML row templates ───────────────────────────────────────────────────────
 extern const char *current_stations_table_row_html;
 extern const char *current_stations_table_total_row_html;

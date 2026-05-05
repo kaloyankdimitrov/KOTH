@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>King of the Hill - Live</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+      :root {
+        --bg-1: #f5f4ef;
+        --bg-2: #eef4f2;
+        --bg-3: #f8e9da;
+        --card: #ffffff;
+        --ink: #191916;
+        --muted: #6c6a63;
+        --accent: #ff7a1a;
+        --accent-2: #1a8cff;
+        --accent-3: #2f9d5c;
+        --team-red: #d84a3a;
+        --team-blue: #1a6fff;
+        --team-neutral: #2f9d5c;
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.14);
+        --ring: rgba(26, 140, 255, 0.2);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(900px 450px at 20%% -10%%, #ffe9d6 0%%, transparent 60%%),
+          radial-gradient(900px 450px at 90%% 10%%, #d7ecff 0%%, transparent 55%%),
+          linear-gradient(160deg, var(--bg-1), var(--bg-2) 60%%, var(--bg-3));
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 36px 24px 60px;
+      }
+
+      .header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .title {
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        animation: rise 0.6s ease-out both;
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+      }
+
+      .timer {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+
+      table {
+        width: 100%%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid #ece6dd;
+      }
+
+      th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+
+      .team-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .team-red {
+        background: rgba(216, 74, 58, 0.16);
+        color: var(--team-red);
+      }
+
+      .team-blue {
+        background: rgba(26, 111, 255, 0.16);
+        color: var(--team-blue);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 14px 20px;
+        font-weight: 700;
+        cursor: pointer;
+        color: #fff;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        font-size: 1rem;
+        min-height: 48px;
+      }
+
+      .btn.stop {
+        background: #e6452f;
+        box-shadow: 0 10px 20px rgba(230, 69, 47, 0.2);
+      }
+
+      .btn.pause {
+        background: var(--accent);
+        box-shadow: 0 10px 20px rgba(255, 122, 26, 0.2);
+      }
+
+      .btn.unpause {
+        background: var(--accent-3);
+        box-shadow: 0 10px 20px rgba(47, 157, 92, 0.2);
+      }
+
+      .btn:active { transform: translateY(1px); }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        .page { padding: 28px 16px 48px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <div class="title">Live Game</div>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Prep Time Left</h2>
+          <div class="timer" id="prep-time">%TimeP%</div>
+        </div>
+        <div class="card">
+          <h2>Game Time Left</h2>
+          <div class="timer" id="game-time">%TimeG%</div>
+        </div>
+        <div class="card" style="grid-column: 1 / -1;">
+          <h2>Station Times</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Station</th>
+                <th><span class="team-chip team-red">Team Red</span></th>
+                <th><span class="team-chip team-blue">Team Blue</span></th>
+              </tr>
+            </thead>
+            <tbody id="current-times-body">
+              %CurrentTimes%
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="controls">
+        <form action="/" method="POST">
+          <button class="btn stop" type="submit">End Game</button>
+        </form>
+        <form action="/game" method="POST">
+          <input type="hidden" name="_method" id="_method" value="pause" />
+          <button class="btn pause" id="pause-button" type="submit">Pause</button>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      (function() {
+        const prepEl = document.getElementById("prep-time");
+        const gameEl = document.getElementById("game-time");
+        const timesBody = document.getElementById("current-times-body");
+        const pauseButton = document.getElementById("pause-button");
+
+        function applyData(data) {
+          if (prepEl) prepEl.textContent = data.timeP || "";
+          if (gameEl) gameEl.textContent = data.timeG || "";
+          if (timesBody && data.currentTimes != null) {
+            timesBody.innerHTML = data.currentTimes;
+          }
+          updatePauseButton(data.status || "");
+        }
+
+        function updatePauseButton(statusText) {
+          if (!pauseButton) return;
+          const normalized = statusText.toLowerCase();
+          const isPaused = normalized.indexOf("paused") !== -1;
+          pauseButton.classList.toggle("pause", !isPaused);
+          pauseButton.classList.toggle("unpause", isPaused);
+          pauseButton.textContent = isPaused ? "Unpause" : "Pause";
+        }
+
+        const source = new EventSource("/events");
+        source.addEventListener("game", (event) => {
+          let data;
+          try {
+            data = JSON.parse(event.data);
+          } catch (err) {
+            return;
+          }
+          applyData(data);
+        });
+
+        source.onerror = function() {
+        };
+      })();
+    </script>
+  </body>
+</html>

@@ -1,8 +1,8 @@
 #include "web_server.h"
 #include "game_state.h"
-#include "html_templates.h"
 #include "utils.h"
 #include "lora_handler.h"
+#include <SPIFFS.h>
 
 // ─── Web server instance ──────────────────────────────────────────────────────
 AsyncWebServer server(80);
@@ -62,6 +62,10 @@ void setupWiFi() {
 }
 
 void setupWebServer() {
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS mount failed");
+  }
+
   events.onConnect([](AsyncEventSourceClient *client) {
     String json = buildGameDataJson();
     client->send(json.c_str(), "game", millis());
@@ -70,9 +74,9 @@ void setupWebServer() {
   // GET / → setup or game page depending on status
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (status == START || status == END)
-      request->send(200, "text/html", setup_html, processor);
+      request->send(SPIFFS, "/setup.html", "text/html", false, processor);
     else
-      request->send(200, "text/html", game_html, processor);
+      request->send(SPIFFS, "/game.html", "text/html", false, processor);
   });
 
   // POST / → set network ID or stop game
@@ -118,14 +122,14 @@ void setupWebServer() {
   // GET /game → game or end page
   server.on("/game", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (status == END)
-      request->send(200, "text/html", end_html, processor);
+      request->send(SPIFFS, "/end.html", "text/html", false, processor);
     else
-      request->send(200, "text/html", game_html, processor);
+      request->send(SPIFFS, "/game.html", "text/html", false, processor);
   });
 
   // GET /end
   server.on("/end", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", end_html, processor);
+    request->send(SPIFFS, "/end.html", "text/html", false, processor);
   });
 
   server.addHandler(&events);

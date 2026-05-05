@@ -19,7 +19,7 @@ enum MsgType : uint8_t {
 struct TimeMessage {
   long team1_time;
   long team2_time;
-  bool end;
+  uint8_t status;
 };
 struct StartMessage {
   long prep_time;

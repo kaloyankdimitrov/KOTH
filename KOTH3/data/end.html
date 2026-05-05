@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>King of the Hill - Results</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+      :root {
+        --bg-1: #f4f2ec;
+        --bg-2: #eff4f1;
+        --bg-3: #f6e7d6;
+        --card: #ffffff;
+        --ink: #181816;
+        --muted: #6c6a63;
+        --accent: #ff7a1a;
+        --accent-2: #1a8cff;
+        --team-red: #d84a3a;
+        --team-blue: #1a6fff;
+        --team-neutral: #2f9d5c;
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.14);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1000px 500px at 10%% -10%%, #ffe9d6 0%%, transparent 60%%),
+          radial-gradient(900px 450px at 85%% 0%%, #d6ecff 0%%, transparent 55%%),
+          linear-gradient(160deg, var(--bg-1), var(--bg-2) 60%%, var(--bg-3));
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 36px 24px 60px;
+      }
+
+      .title {
+        font-size: clamp(2.2rem, 5vw, 3.2rem);
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        animation: rise 0.6s ease-out both;
+      }
+
+      .winner {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(47, 157, 92, 0.16);
+        color: var(--team-neutral);
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .winner.team-red { background: rgba(216, 74, 58, 0.16); color: var(--team-red); }
+      .winner.team-blue { background: rgba(26, 111, 255, 0.16); color: var(--team-blue); }
+      .winner.team-neutral { background: rgba(47, 157, 92, 0.16); color: var(--team-neutral); }
+
+      .table-caption {
+        margin-top: 18px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 0.95rem;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid #ece6dd;
+        vertical-align: top;
+      }
+
+      th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+
+      .team-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .team-red {
+        background: rgba(216, 74, 58, 0.16);
+        color: var(--team-red);
+      }
+
+      .team-blue {
+        background: rgba(26, 111, 255, 0.16);
+        color: var(--team-blue);
+      }
+
+      .sub-time { font-size: 0.8rem; color: var(--muted); display: block; }
+
+      .actions {
+        margin-top: 18px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 14px 20px;
+        background: var(--team-neutral);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(47, 157, 92, 0.2);
+        font-size: 1rem;
+        min-height: 48px;
+      }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        .page { padding: 28px 16px 48px; }
+        .card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="title">Final Results</div>
+
+      <section class="card">
+        <div class="winner team-neutral" id="winner-pill">Winner: <span id="winner-value">%Winner%</span></div>
+
+        <div class="table-caption">This Match Results</div>
+        <table class="stations-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="team-chip team-red">Team Red</span></th>
+              <th><span class="team-chip team-blue">Team Blue</span></th>
+            </tr>
+          </thead>
+          <tbody id="current-times-body">
+            %CurrentTimes%
+          </tbody>
+        </table>
+
+        <div class="table-caption">Past Match History</div>
+        <table>
+          <thead>
+            <tr>
+              <th><span class="team-chip team-red">Team Red</span></th>
+              <th><span class="team-chip team-blue">Team Blue</span></th>
+            </tr>
+          </thead>
+          <tbody id="past-times-body">
+            %PastTimes%
+          </tbody>
+        </table>
+
+        <div class="actions">
+          <a href="/"><button class="btn" type="button">New Game</button></a>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function() {
+        const winnerEl = document.getElementById("winner-value");
+        const winnerPill = document.getElementById("winner-pill");
+        const currentBody = document.getElementById("current-times-body");
+        const pastBody = document.getElementById("past-times-body");
+        if (!winnerEl || !winnerPill || !currentBody || !pastBody) return;
+
+        function setWinnerStyle(value) {
+          const normalized = value.toLowerCase();
+          winnerPill.classList.remove("team-red", "team-blue", "team-neutral");
+          if (normalized.indexOf("red") !== -1) {
+            winnerPill.classList.add("team-red");
+          } else if (normalized.indexOf("blue") !== -1) {
+            winnerPill.classList.add("team-blue");
+          } else {
+            winnerPill.classList.add("team-neutral");
+          }
+        }
+
+        const hasPlaceholders =
+          winnerEl.textContent.indexOf("%Winner%") !== -1 ||
+          currentBody.innerHTML.indexOf("%CurrentTimes%") !== -1 ||
+          pastBody.innerHTML.indexOf("%PastTimes%") !== -1;
+
+        if (!hasPlaceholders) {
+          setWinnerStyle(winnerEl.textContent || "");
+          return;
+        }
+
+        winnerEl.textContent = "Team Blue";
+        setWinnerStyle(winnerEl.textContent);
+        currentBody.innerHTML =
+          "<tr><td>Station 1</td><td>01:12.500</td><td>01:08.220</td></tr>" +
+          "<tr><td>Station 2</td><td>00:58.340</td><td>01:03.040</td></tr>" +
+          "<tr><td><strong>Total</strong></td><td><strong>02:10.840</strong></td><td><strong>02:11.260</strong></td></tr>";
+
+        pastBody.innerHTML =
+          "<tr>" +
+          "<td><div><span class=\"sub-time\"><strong>Station 1:</strong> 00:42.120</span>" +
+          "<span class=\"sub-time\"><strong>Station 2:</strong> 01:10.430</span>" +
+          "<span class=\"sub-time\"><strong>Station 3:</strong> 00:58.210</span>" +
+          "<strong>Total:</strong> 02:50.760</div></td>" +
+          "<td><div><span class=\"sub-time\"><strong>Station 1:</strong> 00:39.980</span>" +
+          "<span class=\"sub-time\"><strong>Station 2:</strong> 01:04.800</span>" +
+          "<span class=\"sub-time\"><strong>Station 3:</strong> 01:02.150</span>" +
+          "<strong>Total:</strong> 02:46.930</div></td>" +
+          "</tr>";
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>King of the Hill</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+      :root {
+        --bg-1: #f6f2ea;
+        --bg-2: #e9efe9;
+        --bg-3: #f2e2d0;
+        --card: #ffffff;
+        --ink: #1c1b18;
+        --muted: #6f6a61;
+        --accent: #ff7a1a;
+        --accent-2: #1a8cff;
+        --accent-3: #2f9d5c;
+        --ring: rgba(255, 122, 26, 0.25);
+        --shadow: 0 18px 55px rgba(0, 0, 0, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1200px 500px at 10%% -10%%, #ffe9d6 0%%, transparent 60%%),
+          radial-gradient(900px 500px at 90%% 0%%, #d6ecff 0%%, transparent 55%%),
+          linear-gradient(160deg, var(--bg-1), var(--bg-2) 55%%, var(--bg-3));
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 28px;
+        animation: rise 0.6s ease-out both;
+      }
+
+      .hero-title {
+        font-size: clamp(2.4rem, 6vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .hero-title span { color: var(--accent); }
+
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        animation: rise 0.6s ease-out both;
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+      }
+
+      .badge-row { margin: 0 0 12px; }
+      .meta { margin: 0 0 12px; font-weight: 600; }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(26, 140, 255, 0.1);
+        color: var(--accent-2);
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .team-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .team-red {
+        background: rgba(216, 74, 58, 0.16);
+        color: #d84a3a;
+      }
+
+      .team-blue {
+        background: rgba(26, 111, 255, 0.16);
+        color: #1a6fff;
+      }
+
+      label { display: block; font-weight: 600; margin: 12px 0 6px; }
+
+      input {
+        width: 100%%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #dcd7cf;
+        background: #fcfbf8;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1rem;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px var(--ring);
+      }
+
+      .btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 20px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        width: 100%%;
+        margin-top: 16px;
+        box-shadow: 0 10px 20px rgba(255, 122, 26, 0.2);
+        font-size: 1rem;
+        min-height: 48px;
+      }
+
+      .btn.success {
+        background: var(--accent-3);
+        box-shadow: 0 10px 20px rgba(47, 157, 92, 0.2);
+      }
+
+      .btn.warning {
+        background: var(--accent);
+        box-shadow: 0 10px 20px rgba(255, 122, 26, 0.2);
+      }
+
+      .btn:active { transform: translateY(1px); }
+
+      table {
+        width: 100%%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 0.95rem;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid #ece6dd;
+        vertical-align: top;
+      }
+
+      th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+
+      .sub-time { font-size: 0.8rem; color: var(--muted); display: block; }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        .page { padding: 28px 16px 48px; }
+        .card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+
+      <section class="grid">
+        <form class="card" action="/game" method="POST">
+          <h2>Start a Round</h2>
+          <label for="prep-time">Preparation duration</label>
+          <input type="text" id="prep-time" name="prep-time" placeholder="02:00" />
+          <label for="game-time">Game duration</label>
+          <input type="text" id="game-time" name="game-time" placeholder="10:00" />
+          <button class="btn success" type="submit">Start Game</button>
+        </form>
+
+        <form class="card" action="/" method="POST">
+          <h2>Network</h2>
+          <div class="meta">Current network ID: <strong id="network-id-value">%NetworkID%</strong></div>
+          <label for="network-id">Update network ID</label>
+          <input type="number" id="network-id" name="network-id" min="1" max="255" placeholder="1-255" />
+          <button class="btn warning" type="submit">Apply Network ID</button>
+        </form>
+        
+        <div class="card">
+          <h2>Station History</h2>
+          <div class="badge-row"><span class="badge">Station %StationID%</span></div>
+          <table>
+            <thead>
+              <tr>
+                <th><span class="team-chip team-red">Team Red</span></th>
+                <th><span class="team-chip team-blue">Team Blue</span></th>
+              </tr>
+            </thead>
+            <tbody id="past-times-body">
+              %PastTimes%
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+    </main>
+
+    <script>
+      (function() {
+        const pastBody = document.getElementById("past-times-body");
+        const networkValue = document.getElementById("network-id-value");
+
+        if (!pastBody || !networkValue) return;
+
+        const hasPlaceholders = pastBody.innerHTML.indexOf("%PastTimes%") !== -1 ||
+          networkValue.textContent.indexOf("%NetworkID%") !== -1;
+
+        if (!hasPlaceholders) return;
+
+        networkValue.textContent = "42";
+        pastBody.innerHTML =
+          "<tr>" +
+          "<td><div><span class=\"sub-time\"><strong>Station 1:</strong> 00:42.120</span>" +
+          "<span class=\"sub-time\"><strong>Station 2:</strong> 01:10.430</span>" +
+          "<span class=\"sub-time\"><strong>Station 3:</strong> 00:58.210</span>" +
+          "<strong>Total:</strong> 02:50.760</div></td>" +
+          "<td><div><span class=\"sub-time\"><strong>Station 1:</strong> 00:39.980</span>" +
+          "<span class=\"sub-time\"><strong>Station 2:</strong> 01:04.800</span>" +
+          "<span class=\"sub-time\"><strong>Station 3:</strong> 01:02.150</span>" +
+          "<strong>Total:</strong> 02:46.930</div></td>" +
+          "</tr>";
+      })();
+    </script>
+  </body>
+</html>

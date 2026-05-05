@@ -64,7 +64,7 @@ void togglePauseStations(bool pause) {
  */
 void sendTimes(bool immediate) {
   if (immediate || (millis() - last_sent >= SYNC_INTERVAL)) {
-    TimeMessage m { team1_times[ID], team2_times[ID], status == END };
+    TimeMessage m { team1_times[ID], team2_times[ID], static_cast<uint8_t>(status) };
     sendMessage(MSG_TIME, &m, sizeof(m));
     last_sent = millis();
   }
@@ -120,6 +120,11 @@ void processReceivedPackets(void *) {
             if (from_id >= 1 && from_id <= STATIONS_COUNT) {
               team1_times[from_id] = p.time_msg.team1_time;
               team2_times[from_id] = p.time_msg.team2_time;
+              if (p.time_msg.status <= END) {
+                if (status != END || p.time_msg.status == END) {
+                  status = static_cast<int>(p.time_msg.status);
+                }
+              }
               Serial.printf("[LoRa] Station %d times: %ld / %ld\n",
                             from_id,
                             p.time_msg.team1_time,
