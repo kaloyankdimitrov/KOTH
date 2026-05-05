@@ -12,5 +12,6 @@ extern AsyncWebServer server;
 // ─── Web server functions ─────────────────────────────────────────────────────
 void setupWiFi();
 void setupWebServer();
+void sendGameEventIfDue(unsigned long now);
 
 #endif // WEB_SERVER_H

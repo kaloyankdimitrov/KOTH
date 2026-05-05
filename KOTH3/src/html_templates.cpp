@@ -289,22 +289,23 @@ span { display: inline-block; transition: color 0.5s ease-in-out; }
         const gameEl = document.getElementById("game-time");
         const timesBody = document.getElementById("current-times-body");
 
-        function updateDashboard() {
-          fetch("/game-data")
-            .then((response) => response.json())
-            .then((data) => {
-              if (statusEl) statusEl.textContent = data.status || "";
-              if (prepEl) prepEl.textContent = data.timeP || "";
-              if (gameEl) gameEl.textContent = data.timeG || "";
-              if (timesBody && data.currentTimes != null) {
-                timesBody.innerHTML = data.currentTimes;
-              }
-            })
-            .catch(() => {});
-        }
+        const source = new EventSource("/events");
+        source.addEventListener("game", (event) => {
+          let data;
+          try {
+            data = JSON.parse(event.data);
+          } catch (err) {
+            return;
+          }
+          if (statusEl) statusEl.textContent = data.status || "";
+          if (prepEl) prepEl.textContent = data.timeP || "";
+          if (gameEl) gameEl.textContent = data.timeG || "";
+          if (timesBody && data.currentTimes != null) {
+            timesBody.innerHTML = data.currentTimes;
+          }
+        });
 
-        updateDashboard();
-        setInterval(updateDashboard, 1000);
+        source.onerror = function() {};
       })();
     </script>
   </body>

@@ -210,5 +210,6 @@ void loop() {
   }
 
   last_millis = millis();
+  sendGameEventIfDue(now);
   delay(50);
 }

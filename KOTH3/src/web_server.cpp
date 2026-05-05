@@ -6,6 +6,7 @@
 
 // ─── Web server instance ──────────────────────────────────────────────────────
 AsyncWebServer server(80);
+AsyncEventSource events("/events");
 
 // ─── Network configuration definitions ────────────────────────────────────────
 String ssid     = String("P") + ID;
@@ -13,6 +14,9 @@ String password = ssid + "password";
 const IPAddress local_IP(10, 0, 0, 10);
 const IPAddress gateway(0, 0, 0, 0);
 const IPAddress subnet(255, 255, 255, 0);
+
+const unsigned long SSE_INTERVAL_MS = 500;
+static unsigned long last_sse_millis = 0;
 
 static String escapeJsonString(const String &input) {
   String output;
@@ -31,6 +35,24 @@ static String escapeJsonString(const String &input) {
   return output;
 }
 
+static String buildGameDataJson() {
+  String json = "{";
+  json += "\"status\":\"" + escapeJsonString(processor("Status")) + "\",";
+  json += "\"timeP\":\"" + escapeJsonString(processor("TimeP")) + "\",";
+  json += "\"timeG\":\"" + escapeJsonString(processor("TimeG")) + "\",";
+  json += "\"currentTimes\":\"" + escapeJsonString(processor("CurrentTimes")) + "\"";
+  json += "}";
+  return json;
+}
+
+void sendGameEventIfDue(unsigned long now) {
+  if (now - last_sse_millis < SSE_INTERVAL_MS) return;
+  last_sse_millis = now;
+  if (events.count() == 0) return;
+  String json = buildGameDataJson();
+  events.send(json.c_str(), "game", now);
+}
+
 void setupWiFi() {
   WiFi.mode(WIFI_AP);
   Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "AP config: OK" : "AP config: FAILED");
@@ -40,6 +62,11 @@ void setupWiFi() {
 }
 
 void setupWebServer() {
+  events.onConnect([](AsyncEventSourceClient *client) {
+    String json = buildGameDataJson();
+    client->send(json.c_str(), "game", millis());
+  });
+
   // GET / → setup or game page depending on status
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (status == START || status == END)
@@ -96,21 +123,11 @@ void setupWebServer() {
       request->send(200, "text/html", game_html, processor);
   });
 
-  // GET /game-data → live game data for dashboard updates
-  server.on("/game-data", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{";
-    json += "\"status\":\"" + escapeJsonString(processor("Status")) + "\",";
-    json += "\"timeP\":\"" + escapeJsonString(processor("TimeP")) + "\",";
-    json += "\"timeG\":\"" + escapeJsonString(processor("TimeG")) + "\",";
-    json += "\"currentTimes\":\"" + escapeJsonString(processor("CurrentTimes")) + "\"";
-    json += "}";
-    request->send(200, "application/json", json);
-  });
-
   // GET /end
   server.on("/end", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/html", end_html, processor);
   });
 
+  server.addHandler(&events);
   server.begin();
 }
