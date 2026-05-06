@@ -113,7 +113,7 @@ String processor(const String &var) {
       case TEAM1:   return "Team Red control";
       case TEAM2:   return "Team Blue control";
       case NEUTRAL: return "NEUTRAL";
-      case END:     return "Ended. Refresh!";
+      case END:     return "Ended";
       default:      return "Error";
     }
   }

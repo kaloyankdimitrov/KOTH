@@ -37,10 +37,15 @@ static String escapeJsonString(const String &input) {
 
 static String buildGameDataJson() {
   String json = "{";
-  json += "\"status\":\"" + escapeJsonString(processor("Status")) + "\",";
+  json += "\"statusText\":\"" + escapeJsonString(processor("Status")) + "\",";
+  json += "\"statusCode\":" + String(status) + ",";
   json += "\"timeP\":\"" + escapeJsonString(processor("TimeP")) + "\",";
   json += "\"timeG\":\"" + escapeJsonString(processor("TimeG")) + "\",";
-  json += "\"currentTimes\":\"" + escapeJsonString(processor("CurrentTimes")) + "\"";
+  json += "\"currentTimes\":\"" + escapeJsonString(processor("CurrentTimes")) + "\",";
+  json += "\"pastTimes\":\"" + escapeJsonString(processor("PastTimes")) + "\",";
+  json += "\"winner\":\"" + escapeJsonString(processor("Winner")) + "\",";
+  json += "\"stationId\":\"" + escapeJsonString(processor("StationID")) + "\",";
+  json += "\"networkId\":\"" + escapeJsonString(processor("NetworkID")) + "\"";
   json += "}";
   return json;
 }
@@ -66,70 +71,77 @@ void setupWebServer() {
     Serial.println("SPIFFS mount failed");
   }
 
+  server.serveStatic("/assets", SPIFFS, "/assets");
+  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+
   events.onConnect([](AsyncEventSourceClient *client) {
     String json = buildGameDataJson();
     client->send(json.c_str(), "game", millis());
   });
 
-  // GET / → setup or game page depending on status
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (status == START || status == END)
-      request->send(SPIFFS, "/setup.html", "text/html", false, processor);
-    else
-      request->send(SPIFFS, "/game.html", "text/html", false, processor);
-  });
-
-  // POST / → set network ID or stop game
-  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+  // POST /api/network → set network ID (restart after save)
+  server.on("/api/network", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (!request->hasParam("network-id", true)) {
+      request->send(400, "application/json", "{\"ok\":false,\"error\":\"missing network-id\"}");
+      return;
+    }
+    int newId = request->getParam("network-id", true)->value().toInt();
+    if (newId < 1 || newId > 255) {
+      request->send(400, "application/json", "{\"ok\":false,\"error\":\"invalid network-id\"}");
+      return;
+    }
     status = START;
-    if (request->hasParam("network-id", true)) {
-      int newId = request->getParam("network-id", true)->value().toInt();
-      if (newId >= 1 && newId <= 255) {
-        preferences.begin(PREFERENCES_NAMESPACE, PREF_RW);
-        preferences.putInt("network_id", newId);
-        preferences.end();
-      }
-      request->redirect("/");
-      ESP.restart();
-    } else {
-      stopStations();
-      request->redirect("/game");
-    }
+    preferences.begin(PREFERENCES_NAMESPACE, PREF_RW);
+    preferences.putInt("network_id", newId);
+    preferences.end();
+    request->send(200, "application/json", "{\"ok\":true,\"restart\":true}");
+    delay(50);
+    ESP.restart();
   });
 
-  // POST /game → start or pause/unpause
-  server.on("/game", HTTP_POST, [](AsyncWebServerRequest *request) {
+  // POST /api/start → start game
+  server.on("/api/start", HTTP_POST, [](AsyncWebServerRequest *request) {
     blinkLightsBlocking(1);
-    if (request->hasParam("_method", true) &&
-        request->getParam("_method", true)->value() == "pause") {
-      togglePauseStations(status != PAUSED);
-    } else {
-      String prep_time_str = request->getParam("prep-time", true)->value();
-      String game_time_str = request->getParam("game-time", true)->value();
-      int prep_delim = prep_time_str.indexOf(':');
-      int game_delim = game_time_str.indexOf(':');
-      int prep_mins  = prep_delim == -1 ? prep_time_str.toInt() : prep_time_str.substring(0, prep_delim).toInt();
-      int game_mins  = game_delim == -1 ? game_time_str.toInt() : game_time_str.substring(0, game_delim).toInt();
-      int prep_secs  = prep_delim == -1 ? 0 : prep_time_str.substring(prep_delim + 1).toInt();
-      int game_secs  = game_delim == -1 ? 0 : game_time_str.substring(game_delim + 1).toInt();
-      long prep_time_ms = (prep_mins * 60 + prep_secs) * 1000L;
-      long game_time_ms = (game_mins * 60 + game_secs) * 1000L;
-      startStations(prep_time_ms, game_time_ms);
+    if (!request->hasParam("prep-time", true) || !request->hasParam("game-time", true)) {
+      request->send(400, "application/json", "{\"ok\":false,\"error\":\"missing times\"}");
+      return;
     }
-    request->redirect("/game");
+    String prep_time_str = request->getParam("prep-time", true)->value();
+    String game_time_str = request->getParam("game-time", true)->value();
+    int prep_delim = prep_time_str.indexOf(':');
+    int game_delim = game_time_str.indexOf(':');
+    int prep_mins  = prep_delim == -1 ? prep_time_str.toInt() : prep_time_str.substring(0, prep_delim).toInt();
+    int game_mins  = game_delim == -1 ? game_time_str.toInt() : game_time_str.substring(0, game_delim).toInt();
+    int prep_secs  = prep_delim == -1 ? 0 : prep_time_str.substring(prep_delim + 1).toInt();
+    int game_secs  = game_delim == -1 ? 0 : game_time_str.substring(game_delim + 1).toInt();
+    long prep_time_ms = (prep_mins * 60 + prep_secs) * 1000L;
+    long game_time_ms = (game_mins * 60 + game_secs) * 1000L;
+    startStations(prep_time_ms, game_time_ms);
+    request->send(200, "application/json", "{\"ok\":true}");
   });
 
-  // GET /game → game or end page
-  server.on("/game", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (status == END)
-      request->send(SPIFFS, "/end.html", "text/html", false, processor);
-    else
-      request->send(SPIFFS, "/game.html", "text/html", false, processor);
+  // POST /api/pause → pause or unpause
+  server.on("/api/pause", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (!request->hasParam("pause", true)) {
+      request->send(400, "application/json", "{\"ok\":false,\"error\":\"missing pause\"}");
+      return;
+    }
+    String pause_str = request->getParam("pause", true)->value();
+    bool pause = pause_str == "1" || pause_str == "true" || pause_str == "on";
+    togglePauseStations(pause);
+    request->send(200, "application/json", "{\"ok\":true}");
   });
 
-  // GET /end
-  server.on("/end", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/end.html", "text/html", false, processor);
+  // POST /api/end → end game
+  server.on("/api/end", HTTP_POST, [](AsyncWebServerRequest *request) {
+    stopStations();
+    request->send(200, "application/json", "{\"ok\":true}");
+  });
+
+  // POST /api/reset → return to setup state
+  server.on("/api/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+    status = START;
+    request->send(200, "application/json", "{\"ok\":true}");
   });
 
   server.addHandler(&events);

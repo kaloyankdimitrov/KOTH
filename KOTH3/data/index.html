@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>King of the Hill</title>
+    <style>
+      @font-face {
+        font-family: "Space Grotesk";
+        src: url("/assets/fonts/SpaceGrotesk-Variable.woff2") format("woff2");
+        font-weight: 300 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url("/assets/fonts/JetBrainsMono-Variable.woff2") format("woff2");
+        font-weight: 100 800;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --bg-1: #f5f1e7;
+        --bg-2: #eef3f2;
+        --bg-3: #f6e6d2;
+        --card: #ffffff;
+        --ink: #1c1b18;
+        --muted: #6f6a61;
+        --accent: #ff7a1a;
+        --accent-2: #1a8cff;
+        --accent-3: #2f9d5c;
+        --team-red: #d84a3a;
+        --team-blue: #1a6fff;
+        --team-neutral: #2f9d5c;
+        --ring: rgba(255, 122, 26, 0.25);
+        --shadow: 0 18px 55px rgba(0, 0, 0, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1100px 520px at 10% -10%, #ffe9d6 0%, transparent 60%),
+          radial-gradient(900px 520px at 90% 0%, #d6ecff 0%, transparent 55%),
+          linear-gradient(160deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 22px 64px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 22px;
+        animation: rise 0.6s ease-out both;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.2rem, 6vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        margin: 0;
+      }
+
+      .hero h1 span { color: var(--accent); }
+
+      .hero .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(26, 140, 255, 0.1);
+        color: var(--accent-2);
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .notice {
+        margin-top: 8px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: rgba(255, 122, 26, 0.12);
+        color: #7a3c0d;
+        font-weight: 600;
+        display: none;
+      }
+
+      .notice.visible { display: block; }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        animation: rise 0.6s ease-out both;
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.15rem;
+      }
+
+      label { display: block; font-weight: 600; margin: 12px 0 6px; }
+
+      input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #dcd7cf;
+        background: #fcfbf8;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1rem;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px var(--ring);
+      }
+
+      .btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 20px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        width: 100%;
+        margin-top: 16px;
+        box-shadow: 0 10px 20px rgba(255, 122, 26, 0.2);
+        font-size: 1rem;
+        min-height: 48px;
+      }
+
+      .btn.success {
+        background: var(--accent-3);
+        box-shadow: 0 10px 20px rgba(47, 157, 92, 0.2);
+      }
+
+      .btn.danger {
+        background: #e6452f;
+        box-shadow: 0 10px 20px rgba(230, 69, 47, 0.2);
+      }
+
+      .btn.secondary {
+        background: var(--accent-2);
+        box-shadow: 0 10px 20px rgba(26, 140, 255, 0.2);
+      }
+
+      .btn:active { transform: translateY(1px); }
+
+      .timer {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 0.95rem;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid #ece6dd;
+        vertical-align: top;
+      }
+
+      th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+
+      .team-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .team-red { background: rgba(216, 74, 58, 0.16); color: var(--team-red); }
+      .team-blue { background: rgba(26, 111, 255, 0.16); color: var(--team-blue); }
+
+      .sub-time { font-size: 0.8rem; color: var(--muted); display: block; }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .winner {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(47, 157, 92, 0.16);
+        color: var(--team-neutral);
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .winner.team-red { background: rgba(216, 74, 58, 0.16); color: var(--team-red); }
+      .winner.team-blue { background: rgba(26, 111, 255, 0.16); color: var(--team-blue); }
+      .winner.team-neutral { background: rgba(47, 157, 92, 0.16); color: var(--team-neutral); }
+
+      .section {
+        display: none;
+        animation: rise 0.6s ease-out both;
+      }
+
+      .section.active { display: block; }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        .page { padding: 26px 16px 48px; }
+        .card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>King of the <span>Hill</span></h1>
+        <div class="meta">
+          <span class="chip">Station <span id="station-id">--</span></span>
+          <span class="chip">Network <span id="network-id">--</span></span>
+          <span class="chip" id="status-chip">Connecting...</span>
+        </div>
+        <div class="notice" id="notice"></div>
+      </section>
+
+      <section class="section" id="setup-view">
+        <div class="grid">
+          <form class="card" id="start-form">
+            <h2>Start a Round</h2>
+            <label for="prep-time">Preparation duration</label>
+            <input type="text" id="prep-time" name="prep-time" placeholder="02:00" />
+            <label for="game-time">Game duration</label>
+            <input type="text" id="game-time" name="game-time" placeholder="10:00" />
+            <button class="btn success" type="submit">Start Game</button>
+          </form>
+
+          <form class="card" id="network-form">
+            <h2>Network</h2>
+            <div class="meta">Current network ID: <strong id="network-id-value">--</strong></div>
+            <label for="network-id-input">Update network ID</label>
+            <input type="number" id="network-id-input" name="network-id" min="1" max="255" placeholder="1-255" />
+            <button class="btn" type="submit">Apply Network ID</button>
+          </form>
+
+          <div class="card">
+            <h2>Station History</h2>
+            <div class="meta">Station <strong id="station-id-value">--</strong></div>
+            <table>
+              <thead>
+                <tr>
+                  <th><span class="team-chip team-red">Team Red</span></th>
+                  <th><span class="team-chip team-blue">Team Blue</span></th>
+                </tr>
+              </thead>
+              <tbody id="past-times-setup"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="live-view">
+        <div class="grid">
+          <div class="card">
+            <h2>Prep Time Left</h2>
+            <div class="timer" id="prep-time-value">00:00</div>
+          </div>
+          <div class="card">
+            <h2>Game Time Left</h2>
+            <div class="timer" id="game-time-value">00:00</div>
+          </div>
+          <div class="card" style="grid-column: 1 / -1;">
+            <h2>Station Times</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th><span class="team-chip team-red">Team Red</span></th>
+                  <th><span class="team-chip team-blue">Team Blue</span></th>
+                </tr>
+              </thead>
+              <tbody id="current-times"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="btn danger" id="end-button" type="button">End Game</button>
+          <button class="btn secondary" id="pause-button" type="button">Pause</button>
+        </div>
+      </section>
+
+      <section class="section" id="end-view">
+        <div class="card">
+          <div class="winner team-neutral" id="winner-pill">Winner: <span id="winner-value">--</span></div>
+
+          <div class="meta">This Match Results</div>
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th><span class="team-chip team-red">Team Red</span></th>
+                <th><span class="team-chip team-blue">Team Blue</span></th>
+              </tr>
+            </thead>
+            <tbody id="current-times-end"></tbody>
+          </table>
+
+          <div class="meta" style="margin-top: 16px;">Past Match History</div>
+          <table>
+            <thead>
+              <tr>
+                <th><span class="team-chip team-red">Team Red</span></th>
+                <th><span class="team-chip team-blue">Team Blue</span></th>
+              </tr>
+            </thead>
+            <tbody id="past-times-end"></tbody>
+          </table>
+
+          <div class="controls">
+            <button class="btn success" id="new-game-button" type="button">New Game</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function() {
+        const STATUS = {
+          START: 0,
+          PAUSED: 1,
+          PREP: 2,
+          NEUTRAL: 3,
+          TEAM1: 4,
+          TEAM2: 5,
+          END: 6
+        };
+
+        const views = {
+          setup: document.getElementById("setup-view"),
+          live: document.getElementById("live-view"),
+          end: document.getElementById("end-view")
+        };
+
+        const stationId = document.getElementById("station-id");
+        const stationIdValue = document.getElementById("station-id-value");
+        const networkId = document.getElementById("network-id");
+        const networkIdValue = document.getElementById("network-id-value");
+        const statusChip = document.getElementById("status-chip");
+        const notice = document.getElementById("notice");
+        const prepTimeValue = document.getElementById("prep-time-value");
+        const gameTimeValue = document.getElementById("game-time-value");
+        const currentTimes = document.getElementById("current-times");
+        const currentTimesEnd = document.getElementById("current-times-end");
+        const pastTimesSetup = document.getElementById("past-times-setup");
+        const pastTimesEnd = document.getElementById("past-times-end");
+        const winnerValue = document.getElementById("winner-value");
+        const winnerPill = document.getElementById("winner-pill");
+        const pauseButton = document.getElementById("pause-button");
+
+        let lastData = null;
+
+        function showNotice(text) {
+          if (!notice) return;
+          notice.textContent = text;
+          notice.classList.add("visible");
+        }
+
+        function clearNotice() {
+          if (!notice) return;
+          notice.textContent = "";
+          notice.classList.remove("visible");
+        }
+
+        function setView(viewName) {
+          Object.keys(views).forEach((key) => {
+            if (!views[key]) return;
+            views[key].classList.toggle("active", key === viewName);
+          });
+        }
+
+        function updateWinnerStyle(label) {
+          if (!winnerPill) return;
+          const normalized = (label || "").toLowerCase();
+          winnerPill.classList.remove("team-red", "team-blue", "team-neutral");
+          if (normalized.indexOf("red") !== -1) {
+            winnerPill.classList.add("team-red");
+          } else if (normalized.indexOf("blue") !== -1) {
+            winnerPill.classList.add("team-blue");
+          } else {
+            winnerPill.classList.add("team-neutral");
+          }
+        }
+
+        function fillTable(target, html, emptyText) {
+          if (!target) return;
+          if (html && html.trim().length > 0) {
+            target.innerHTML = html;
+            return;
+          }
+          const cols = target.closest("table").querySelectorAll("thead th").length || 1;
+          target.innerHTML = "<tr><td colspan=\"" + cols + "\">" + emptyText + "</td></tr>";
+        }
+
+        function updatePauseButton(statusCode) {
+          if (!pauseButton) return;
+          const isPaused = statusCode === STATUS.PAUSED;
+          pauseButton.textContent = isPaused ? "Unpause" : "Pause";
+          pauseButton.classList.toggle("secondary", !isPaused);
+          pauseButton.classList.toggle("success", isPaused);
+        }
+
+        function applyData(data) {
+          lastData = data;
+          if (stationId) stationId.textContent = data.stationId || "--";
+          if (stationIdValue) stationIdValue.textContent = data.stationId || "--";
+          if (networkId) networkId.textContent = data.networkId || "--";
+          if (networkIdValue) networkIdValue.textContent = data.networkId || "--";
+          if (statusChip) statusChip.textContent = data.statusText || "--";
+
+          if (prepTimeValue) prepTimeValue.textContent = data.timeP || "00:00";
+          if (gameTimeValue) gameTimeValue.textContent = data.timeG || "00:00";
+
+          fillTable(currentTimes, data.currentTimes, "Waiting for station times...");
+          fillTable(currentTimesEnd, data.currentTimes, "No results yet.");
+          fillTable(pastTimesSetup, data.pastTimes, "No history yet.");
+          fillTable(pastTimesEnd, data.pastTimes, "No history yet.");
+
+          if (winnerValue) winnerValue.textContent = data.winner || "--";
+          updateWinnerStyle(data.winner || "");
+          updatePauseButton(data.statusCode);
+
+          if (data.statusCode === STATUS.END) {
+            setView("end");
+          } else if (data.statusCode === STATUS.START) {
+            setView("setup");
+          } else {
+            setView("live");
+          }
+        }
+
+        function postForm(url, form) {
+          const formData = new FormData(form);
+          const body = new URLSearchParams(formData);
+          return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+          });
+        }
+
+        const startForm = document.getElementById("start-form");
+        const networkForm = document.getElementById("network-form");
+        const endButton = document.getElementById("end-button");
+        const newGameButton = document.getElementById("new-game-button");
+
+        if (startForm) {
+          startForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            clearNotice();
+            postForm("/api/start", startForm).catch(() => {
+              showNotice("Could not start the game.");
+            });
+          });
+        }
+
+        if (networkForm) {
+          networkForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            clearNotice();
+            postForm("/api/network", networkForm)
+              .then((res) => {
+                if (res.ok) {
+                  showNotice("Network updated. Restarting...");
+                } else {
+                  showNotice("Network update failed.");
+                }
+              })
+              .catch(() => {
+                showNotice("Network update failed.");
+              });
+          });
+        }
+
+        if (endButton) {
+          endButton.addEventListener("click", () => {
+            clearNotice();
+            fetch("/api/end", { method: "POST" }).catch(() => {
+              showNotice("Could not end the game.");
+            });
+          });
+        }
+
+        if (pauseButton) {
+          pauseButton.addEventListener("click", () => {
+            clearNotice();
+            const shouldPause = !lastData || lastData.statusCode !== STATUS.PAUSED;
+            const body = new URLSearchParams({ pause: shouldPause ? "1" : "0" });
+            fetch("/api/pause", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: body.toString()
+            }).catch(() => {
+              showNotice("Could not toggle pause.");
+            });
+          });
+        }
+
+        if (newGameButton) {
+          newGameButton.addEventListener("click", () => {
+            clearNotice();
+            fetch("/api/reset", { method: "POST" }).catch(() => {
+              showNotice("Could not reset the game.");
+            });
+          });
+        }
+
+        const source = new EventSource("/events");
+        source.addEventListener("game", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            clearNotice();
+            applyData(data);
+          } catch (err) {
+          }
+        });
+
+        source.onerror = function() {
+          showNotice("Disconnected from server. Trying to reconnect...");
+        };
+      })();
+    </script>
+  </body>
+</html>
